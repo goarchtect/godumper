@@ -4,17 +4,17 @@ export PATH := $(GOPATH)/bin:$(PATH)
 all: get build test
 
 get:
-	@echo "--> go get..."
+	@echo "--> go get relate package..."
 	go get github.com/xelabs/go-mysqlstack/driver
 	go get github.com/stretchr/testify/assert
 	go get github.com/pierrre/gotestcover
 
 build:
 	@$(MAKE) get
-	@echo "--> Building..."
-	go build -v -o bin/mydumper src/mydumper/main.go
-	go build -v -o bin/myloader src/myloader/main.go
-	go build -v -o bin/mystreamer src/mystreamer/main.go
+	@echo "--> Building godumper ..."
+	go build -v -o bin/dumper src/mydumper/main.go
+	go build -v -o bin/loader src/myloader/main.go
+	go build -v -o bin/streamer src/mystreamer/main.go
 	@chmod 755 bin/*
 
 clean:

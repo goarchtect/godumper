@@ -7,14 +7,6 @@
 
 ## Build
 
-```
-$git clone https://github.com/xelabs/go-mydumper
-$cd go-mydumper
-$make build
-$./bin/mydumper   -h
-$./bin/myloader   -h
-$./bin/mystreamer -h
-```
 
 ## Test
 
@@ -27,7 +19,7 @@ $make test
 ### mydumper
 
 ```
-./bin/mydumper --help
+./bin/dumper --help
 Usage: ./bin/mydumper -h [HOST] -P [PORT] -u [USER] -p [PASSWORD] -db [DATABASE] -o [OUTDIR]
   -F int
     	Split tables into chunks of this output file size. This value is in MB (default 128)
@@ -53,7 +45,7 @@ Usage: ./bin/mydumper -h [HOST] -P [PORT] -u [USER] -p [PASSWORD] -db [DATABASE]
     	Session variables
 
 Examples:
-$./bin/mydumper -h 192.168.0.1 -P 3306 -u mock -p mock -db sbtest  -o sbtest.sql
+$./bin/dumper -h 192.168.0.1 -P 3306 -u mock -p mock -db sbtest  -o sbtest.sql
  2017/10/25 13:12:52.933391 dumper.go:35:         [INFO]        dumping.database[sbtest].schema...
  2017/10/25 13:12:52.937743 dumper.go:45:         [INFO]        dumping.table[sbtest.benchyou0].schema...
  2017/10/25 13:12:52.937791 dumper.go:168:        [INFO]        dumping.table[sbtest.benchyou0].datas.thread[1]...
@@ -93,7 +85,7 @@ sbtest.benchyou0.00007.sql  sbtest.benchyou0.00016.sql  sbtest.benchyou1.00004.s
 sbtest.benchyou0.00008.sql  sbtest.benchyou0.00017.sql  sbtest.benchyou1.00005.sql   sbtest.benchyou1.00014.sql
 ```
 
-### myloader
+### loader
 
 ```
 $ ./bin/myloader --help
@@ -137,7 +129,7 @@ $./bin/myloader -h 192.168.0.2 -P 3306 -u mock -p mock -d sbtest.sql
  2017/10/25 13:05:52.602573 loader.go:187:        [INFO]        restoring.all.done.cost[95.09sec].allbytes[5120.00MB].rate[53.85MB/s]
 ```
 
-### mystreamer
+### streamer
 
 Streaming mode, dumps datas from upstream to downstream in parallel instead of dumping to the out directory.
 ```
@@ -200,4 +192,4 @@ $./bin/mystreamer -h 192.168.0.2 -P 3306 -u mock -p mock -2h 192.168.0.3 -2P 330
 
 ## License
 
-go-mydumper is released under the GPLv3. See LICENSE
+godumper is released under the GPLv3. See LICENSE
