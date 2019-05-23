@@ -122,7 +122,6 @@ func dumpTable(log *xlog.Log, conn *Connection, args *Args, table string) {
 			fileNo++
 		}
 	}
-	fmt.Println("aaa")
 	if chunkbytes > 0 {
 		if len(rows) > 0 {
 			insertone := fmt.Sprintf("INSERT INTO `%s`(%s) VALUES\n%s", table, strings.Join(fields, ","), strings.Join(rows, ",\n"))
