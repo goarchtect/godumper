@@ -28,12 +28,14 @@ type Files struct {
 	databases []string
 	schemas   []string
 	tables    []string
+	triggers    []string
 }
 
 var (
 	dbSuffix     = "-schema-create.sql"
 	schemaSuffix = "-schema.sql"
 	tableSuffix  = ".sql"
+	triggerSuffix = "-trigger.sql"
 )
 
 func loadFiles(log *xlog.Log, dir string) *Files {
@@ -49,6 +51,8 @@ func loadFiles(log *xlog.Log, dir string) *Files {
 				files.databases = append(files.databases, path)
 			case strings.HasSuffix(path, schemaSuffix):
 				files.schemas = append(files.schemas, path)
+			case strings.HasSuffix(path, triggerSuffix):
+				files.triggers = append(files.triggers, path)
 			default:
 				if strings.HasSuffix(path, tableSuffix) {
 					files.tables = append(files.tables, path)
@@ -74,6 +78,45 @@ func restoreDatabaseSchema(log *xlog.Log, dbs []string, conn *Connection) {
 		err = conn.Execute(sql)
 		AssertNil(err)
 		log.Info("restoring.database[%s]", name)
+	}
+}
+
+func restoreTrigger(log *xlog.Log, overwrite bool, triggers []string, conn *Connection,dbName string)  {
+	for _, trigger := range triggers {
+		// use
+		var db string
+		base := filepath.Base(trigger)
+		name := strings.TrimSuffix(base, triggerSuffix)
+		if dbName == "" {
+			db = strings.Split(name, ".")[0]
+		} else {
+			db = dbName
+		}
+		tr := strings.Split(name, ".")[1]
+		name = fmt.Sprintf("`%v`.`%v`", db, tr)
+
+		log.Info("working.trigger[%s]", name)
+
+		err := conn.Execute(fmt.Sprintf("USE `%s`", db))
+		AssertNil(err)
+
+		data, err := ReadFile(trigger)
+		AssertNil(err)
+		query := common.BytesToString(data)
+		//querys := strings.Split(query1, ";\n")
+		//fmt.Println(querys)
+
+		if !strings.HasPrefix(query, "/*") && query != "" {
+			if overwrite {
+				log.Info("drop(overwrite.is.true).trigger[%s]", name)
+				dropQuery := fmt.Sprintf("DROP TRIGGER IF EXISTS %s", name)
+				err = conn.Execute(dropQuery)
+				AssertNil(err)
+			}
+			err = conn.Execute(query)
+			AssertNil(err)
+		}
+		log.Info("restoring.trigger[%s]", name)
 	}
 }
 
@@ -140,7 +183,6 @@ func restoreTable(log *xlog.Log, table string, conn *Connection,dbName string) i
 	log.Info("restoring.tables[%s].parts[%s].thread[%d]", tbl, part, conn.ID)
 	err := conn.Execute(fmt.Sprintf("USE `%s`", db))
 	AssertNil(err)
-
 	err = conn.Execute("SET FOREIGN_KEY_CHECKS=0")
 	AssertNil(err)
 
@@ -199,6 +241,10 @@ func Loader(log *xlog.Log, args *Args) {
 			atomic.AddUint64(&bytes, uint64(r))
 		}(conn, table)
 	}
+
+	connTrigger := pool.Get()
+	restoreTrigger(log, args.OverwriteTables, files.triggers, connTrigger,args.Database)
+	pool.Put(connTrigger)
 
 	tick := time.NewTicker(time.Millisecond * time.Duration(args.IntervalMs))
 	defer tick.Stop()

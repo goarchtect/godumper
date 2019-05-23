@@ -33,7 +33,7 @@ func init() {
 	flag.StringVar(&flagDb, "db", "", "Database to dump")
 	flag.StringVar(&flagTable, "table", "", "Table to dump")
 	flag.StringVar(&flagDir, "o", "", "Directory to output files to")
-	flag.IntVar(&flagChunksize, "F", 128, "Split tables into chunks of this output file size. This value is in MB")
+	flag.IntVar(&flagChunksize, "F", 100, "Split tables into chunks of this output file size. This value is in MB")
 	flag.IntVar(&flagThreads, "t", 16, "Number of threads to use")
 	flag.IntVar(&flagStmtSize, "s", 1000000, "Attempted size of INSERT statement in bytes")
 	flag.StringVar(&flagSessionVars, "vars", "", "Session variables")

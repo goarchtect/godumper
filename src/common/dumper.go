@@ -29,10 +29,23 @@ func dumpDatabaseSchema(log *xlog.Log, conn *Connection, args *Args) {
 	err := conn.Execute(fmt.Sprintf("USE `%s`", args.Database))
 	AssertNil(err)
 
+
 	schema := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s`;", args.Database)
 	file := fmt.Sprintf("%s/%s-schema-create.sql", args.Outdir, args.Database)
 	WriteFile(file, schema)
 	log.Info("dumping.database[%s].schema...", args.Database)
+}
+
+func dumpDatabaseTrigger(log *xlog.Log, conn *Connection, args *Args, trigger string) {
+	qr, err := conn.Fetch(fmt.Sprintf("SELECT TRIGGER_NAME,EVENT_MANIPULATION,EVENT_OBJECT_TABLE,ACTION_STATEMENT,ACTION_ORIENTATION,ACTION_TIMING FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA = '%s' AND TRIGGER_NAME = '%s';", args.Database,trigger))
+	AssertNil(err)
+	triggerName:=qr.Rows[0][0].ToString()
+	triggerStatement := qr.Rows[0][3].String() + ";\n"
+
+	contentTrigger:=fmt.Sprintf("CREATE TRIGGER %s %s %s ON %s FOR EACH %s %s",triggerName,qr.Rows[0][5].ToString(),qr.Rows[0][1].ToString(),qr.Rows[0][2].ToString(),qr.Rows[0][4].ToString(),triggerStatement)
+	file := fmt.Sprintf("%s/%s.%s-trigger.sql", args.Outdir, args.Database, trigger)
+	WriteFile(file, contentTrigger)
+	log.Info("dumping.trigger[%s.%s].trigger...", args.Database, trigger)
 }
 
 func dumpTableSchema(log *xlog.Log, conn *Connection, args *Args, table string) {
@@ -109,6 +122,7 @@ func dumpTable(log *xlog.Log, conn *Connection, args *Args, table string) {
 			fileNo++
 		}
 	}
+	fmt.Println("aaa")
 	if chunkbytes > 0 {
 		if len(rows) > 0 {
 			insertone := fmt.Sprintf("INSERT INTO `%s`(%s) VALUES\n%s", table, strings.Join(fields, ","), strings.Join(rows, ",\n"))
@@ -136,6 +150,17 @@ func allTables(log *xlog.Log, conn *Connection, args *Args) []string {
 	return tables
 }
 
+func allTriggers(log *xlog.Log, conn *Connection, args *Args) []string {
+	tr, err := conn.Fetch(fmt.Sprintf("SHOW TRIGGERS FROM `%s`", args.Database))
+	AssertNil(err)
+
+	triggers := make([]string, 0, 150)
+	for _, t := range tr.Rows {
+		triggers = append(triggers, t[0].String())
+	}
+	return triggers
+}
+
 // Dumper used to start the dumper worker.
 func Dumper(log *xlog.Log, args *Args) {
 	pool, err := NewPool(log, args.Threads, args.Address, args.User, args.Password, args.SessionVars)
@@ -152,6 +177,7 @@ func Dumper(log *xlog.Log, args *Args) {
 	// tables.
 	var wg sync.WaitGroup
 	var tables []string
+	triggers:= allTriggers(log, conn, args)
 	t := time.Now()
 	if args.Table != "" {
 		tables = strings.Split(args.Table, ",")
@@ -174,6 +200,13 @@ func Dumper(log *xlog.Log, args *Args) {
 			dumpTable(log, conn, args, table)
 			log.Info("dumping.table[%s.%s].datas.thread[%d].done...", args.Database, table, conn.ID)
 		}(conn, table)
+	}
+
+	//triggers
+	for _, trigger := range triggers {
+		conn:=pool.Get()
+		dumpDatabaseTrigger(log, conn, args, trigger)
+		pool.Put(conn)
 	}
 
 	tick := time.NewTicker(time.Millisecond * time.Duration(args.IntervalMs))
