@@ -30,6 +30,33 @@ func streamDatabaseSchema(log *xlog.Log, db string, todb string, from *Connectio
 	AssertNil(err)
 	log.Info("streaming.database[%s].schema...", todb)
 }
+func streamTriggers(log *xlog.Log, db string, todb string, toengine string, trigger string, overwrite bool, from *Connection, to *Connection)  {
+	qr, err := from.Fetch(fmt.Sprintf("SELECT TRIGGER_NAME,EVENT_MANIPULATION,EVENT_OBJECT_TABLE,ACTION_STATEMENT,ACTION_ORIENTATION,ACTION_TIMING FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA = '%s' AND TRIGGER_NAME = '%s';", db,trigger))
+	AssertNil(err)
+	triggerName:=qr.Rows[0][0].ToString()
+	triggerStatement := qr.Rows[0][3].String() + ";\n"
+
+	contentTrigger:=fmt.Sprintf("CREATE TRIGGER %s %s %s ON %s FOR EACH %s %s",triggerName,qr.Rows[0][5].ToString(),qr.Rows[0][1].ToString(),qr.Rows[0][2].ToString(),qr.Rows[0][4].ToString(),triggerStatement)
+
+	// Rewrite the table engine.
+	if toengine != "" {
+		node, err := sqlparser.Parse(contentTrigger)
+		AssertNil(err)
+		if ddl, ok := node.(*sqlparser.DDL); ok {
+			ddl.TableSpec.Options.Engine = toengine
+			contentTrigger = sqlparser.String(ddl)
+			log.Warning("streaming.triggerngine.rewritten:%v", contentTrigger)
+		}
+	}
+	err = to.Execute(fmt.Sprintf("USE `%s`", todb))
+	AssertNil(err)
+
+	err = to.Execute(contentTrigger)
+	AssertNil(err)
+	fmt.Println(contentTrigger)
+	log.Info("streaming.trigger[%s.%s].trigger...", todb, trigger)
+
+}
 
 func streamTableSchema(log *xlog.Log, db string, todb string, toengine string, tbl string, overwrite bool, from *Connection, to *Connection) {
 	qr, err := from.Fetch(fmt.Sprintf("SHOW CREATE TABLE `%s`.`%s`", db, tbl))
@@ -157,6 +184,8 @@ func Streamer(log *xlog.Log, args *Args) {
 	to := toPool.Get()
 	streamDatabaseSchema(log, db, todb, from, to)
 
+	triggers:= allTriggers(log, from, args)
+
 	// tables.
 	t := time.Now()
 	if args.Table != "" {
@@ -184,6 +213,16 @@ func Streamer(log *xlog.Log, args *Args) {
 			streamTable(log, db, todb, tbl, from, to, args)
 			log.Info("streaming.table[%s.%s].datas.thread[%d].done...", db, tbl, from.ID)
 		}(db, tbl, from, to, args)
+	}
+
+	for _, trigger := range triggers {
+		from := fromPool.Get()
+		to := toPool.Get()
+		defer func(){
+			fromPool.Put(from)
+			toPool.Put(to)
+		}()
+		streamTriggers(log, db, todb, toengine, trigger, args.OverwriteTables, from, to)
 	}
 
 	tick := time.NewTicker(time.Millisecond * time.Duration(args.IntervalMs))
