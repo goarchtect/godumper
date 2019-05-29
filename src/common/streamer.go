@@ -53,7 +53,7 @@ func streamTriggers(log *xlog.Log, db string, todb string, toengine string, trig
 
 	err = to.Execute(contentTrigger)
 	AssertNil(err)
-	fmt.Println(contentTrigger)
+	//fmt.Println(contentTrigger)
 	log.Info("streaming.trigger[%s.%s].trigger...", todb, trigger)
 
 }
