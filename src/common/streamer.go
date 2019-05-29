@@ -104,9 +104,11 @@ func streamTable(log *xlog.Log, db string, todb string, tbl string, from *Connec
 
 	err = to.Execute(fmt.Sprintf("USE `%s`", todb))
 	AssertNil(err)
-
-
 	err = to.Execute("SET FOREIGN_KEY_CHECKS=0")
+	AssertNil(err)
+	err = to.Execute("SET UNIQUE_CHECKS=0")
+	AssertNil(err)
+	err = to.Execute("SET AUTOCOMMIT=0")
 	AssertNil(err)
 
 	stmtsize := 0
@@ -155,6 +157,12 @@ func streamTable(log *xlog.Log, db string, todb string, tbl string, from *Connec
 	}
 
 	err = cursor.Close()
+	AssertNil(err)
+	err = to.Execute("SET FOREIGN_KEY_CHECKS=1")
+	AssertNil(err)
+	err = to.Execute("SET UNIQUE_CHECKS=1")
+	AssertNil(err)
+	err = to.Execute("SET AUTOCOMMIT=1")
 	AssertNil(err)
 	log.Info("streaming.table[%s.%s].done.allrows[%v].allbytes[%vMB].thread[%d]...", todb, tbl, allRows, (allBytes / 1024 / 1024), from.ID)
 }

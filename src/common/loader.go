@@ -185,6 +185,10 @@ func restoreTable(log *xlog.Log, table string, conn *Connection,dbName string) i
 	AssertNil(err)
 	err = conn.Execute("SET FOREIGN_KEY_CHECKS=0")
 	AssertNil(err)
+	err = conn.Execute("SET UNIQUE_CHECKS=0")
+	AssertNil(err)
+	err = conn.Execute("SET AUTOCOMMIT=0")
+	AssertNil(err)
 
 	data, err := ReadFile(table)
 	AssertNil(err)
@@ -197,6 +201,12 @@ func restoreTable(log *xlog.Log, table string, conn *Connection,dbName string) i
 			AssertNil(err)
 		}
 	}
+	err = conn.Execute("SET FOREIGN_KEY_CHECKS=1")
+	AssertNil(err)
+	err = conn.Execute("SET UNIQUE_CHECKS=1")
+	AssertNil(err)
+	err = conn.Execute("SET AUTOCOMMIT=1")
+	AssertNil(err)
 	log.Info("restoring.tables[%s].parts[%s].thread[%d].done...", tbl, part, conn.ID)
 	return bytes
 }
