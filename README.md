@@ -36,7 +36,7 @@ Usage: ./dumper -h [HOST] -P [PORT] -u [USER] -p [PASSWORD] -db [DATABASE] -o [O
 eg:
 $./dumper -h 192.168.0.1 -P 3306 -u root -p root -db HR  -o HR.sql
 
-
+```
 ### loader
 
 ```
@@ -59,7 +59,7 @@ Usage: ./bin/myloader -h [HOST] -P [PORT] -u [USER] -p [PASSWORD] -d  [DIR] -db 
 
 eg:
 $./loader -h 192.168.0.2 -P 3306 -u root -p root -d db.sql
-
+```
 ### streamer
 
 Streaming mode, dumps datas from upstream to downstream in parallel instead of dumping to the out directory.
@@ -96,6 +96,6 @@ Usage: .streamer -h [HOST] -P [PORT] -u [USER] -p [PASSWORD] -db [DATABASE] -2h 
 
 eg:
 $./streamer -h 192.168.0.2 -P 3306 -u mock -p mock -2h 192.168.0.3 -2P 3306 -2u mock -2p db2 -db sbtest
-
+```
 ## License
 godumper is released under the GPLv3. See LICENSE
